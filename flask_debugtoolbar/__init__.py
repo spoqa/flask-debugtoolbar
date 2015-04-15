@@ -185,22 +185,32 @@ class DebugToolbarExtension(object):
                     response.response = [content]
                     response.status_code = 200
 
+        if not self.should_process_response(response):
+            return response
+
+        toolbar = self.debug_toolbars[real_request]
+
+        for panel in toolbar.panels:
+            panel.process_response(real_request, response)
+
+        toolbar_html = toolbar.render_toolbar()
+        return self.insert_toolbar(toolbar_html, response)
+
+    def should_process_response(self, response):
         # If the http response code is 200 then we process to add the
         # toolbar to the returned html response.
-        if (response.status_code == 200 and
-                response.headers['content-type'].startswith('text/html')):
-            for panel in self.debug_toolbars[real_request].panels:
-                panel.process_response(real_request, response)
+        return (response.status_code == 200 and
+                response.is_sequence and
+                response.headers['content-type'].startswith('text/html'))
 
-            if response.is_sequence:
-                response_html = response.data.decode(response.charset)
-                toolbar_html = self.debug_toolbars[real_request].render_toolbar()
+    def insert_toolbar(self, toolbar_html, response):
+        response_html = response.data.decode(response.charset)
 
-                content = replace_insensitive(
-                    response_html, '</body>', toolbar_html + '</body>')
-                content = content.encode(response.charset)
-                response.response = [content]
-                response.content_length = len(content)
+        content = replace_insensitive(
+            response_html, '</body>', toolbar_html + '</body>')
+        content = content.encode(response.charset)
+        response.response = [content]
+        response.content_length = len(content)
 
         return response
 
