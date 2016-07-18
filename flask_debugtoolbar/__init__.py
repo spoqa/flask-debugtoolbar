@@ -41,7 +41,7 @@ class DebugToolbarExtension(object):
 
     _redirect_codes = [301, 302, 303, 304]
 
-    def __init__(self, app=None):
+    def __init__(self, app=None, prefix_url='/'):
         self.app = app
         self.debug_toolbars = {}
 
@@ -53,6 +53,8 @@ class DebugToolbarExtension(object):
             loader=PackageLoader(__name__, 'templates'))
         self.jinja_env.filters['urlencode'] = url_quote_plus
         self.jinja_env.filters['printable'] = _printable
+
+        self.prefix_url = prefix_url
 
         if app is not None:
             self.init_app(app)
@@ -128,6 +130,9 @@ class DebugToolbarExtension(object):
     def _show_toolbar(self):
         """Return a boolean to indicate if we need to show the toolbar."""
         if request.blueprint == 'debugtoolbar':
+            return False
+
+        if not request.path.startswith(self.prefix_url):
             return False
 
         hosts = current_app.config['DEBUG_TB_HOSTS']
